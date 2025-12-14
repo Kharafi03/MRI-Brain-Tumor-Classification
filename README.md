@@ -1,75 +1,64 @@
-# MRI Brain Tumor Classification
+# README: MRI Brain Tumor Classification
 
 ## Overview
-This project aims to classify MRI images of the brain to detect the presence and type of brain tumors. It utilizes a deep learning approach with Transfer Learning, specifically fine-tuning a ResNet50V2 model, and evaluates different optimizers to find the best performing one.
+This project focuses on classifying brain tumors from MRI images using a deep learning approach, specifically leveraging Transfer Learning with the ResNet50V2 model. The goal is to accurately distinguish between different types of brain tumors (glioma, meningioma, pituitary) and healthy brains (notumor). The project explores the impact of various optimizers (Adam, RMSprop, Nadam, Adamax) on model performance.
 
 ## Dataset
-The dataset used for this project is the "Brain Tumor MRI Dataset" from Kaggle. It contains MRI images categorized into four classes:
+The dataset used is the "Brain Tumor MRI Dataset" available on Kaggle (masoudnickparvar/brain-tumor-mri-dataset). It contains MRI images categorized into four classes:
 - Glioma
 - Meningioma
-- No Tumor
+- Notumor (healthy brain)
 - Pituitary
 
-The dataset is split into `Training` and `Testing` subsets.
-
 ## Preprocessing
-Image preprocessing is a crucial step to enhance the quality of the images and prepare them for model training. The `preprocess_image` function performs the following steps:
-1.  **Read Image**: Images are read in color mode.
-2.  **Grayscale Conversion**: Converted to grayscale to simplify the image.
-3.  **Gaussian Blur**: Applied to reduce noise.
-4.  **Thresholding**: Binary thresholding is used to segment the image and isolate the brain region.
-5.  **Contour Detection**: The largest contour is found, which is assumed to be the brain area.
-6.  **Cropping**: The image is cropped to focus on the brain region.
-7.  **Resizing**: Images are resized to `(224, 224)` pixels, which is the input size expected by ResNet50V2.
-8.  **Normalization**: Pixel values are scaled to the range `[0, 1]`.
+To prepare the MRI images for model training, the following preprocessing steps are applied:
+1.  **Image Loading**: MRI images are loaded using OpenCV.
+2.  **Thresholding**: Images are binarized to highlight brain regions.
+3.  **Erosion & Dilation**: Morphological operations are applied to refine the binary mask.
+4.  **Contour Detection & Cropping**: The largest contour (assumed to be the brain) is detected, and the image is cropped to focus on this region.
+5.  **Resizing**: Cropped images are resized to a target dimension of (224, 224) pixels.
+6.  **Normalization**: Pixel values are normalized to the range [0, 1].
 
-Labels are one-hot encoded using `LabelBinarizer`.
+Additionally, **data augmentation** techniques such as rotation and horizontal flipping are used during training to increase the diversity of the training data and improve model generalization.
 
-## Data Augmentation
-To increase the diversity of the training data and improve the model's generalization capabilities, data augmentation is applied using `ImageDataGenerator` with the following transformations:
--   `rotation_range=10`: Randomly rotates images by up to 10 degrees.
--   `horizontal_flip=True`: Randomly flips images horizontally.
--   `fill_mode='nearest'`: Fills in newly created pixels after rotation or shifting with the nearest available pixel.
+## Model Training
 
-## Model Architecture (ResNet50V2 Transfer Learning)
-The project utilizes a pre-trained ResNet50V2 model as a base for transfer learning. The model architecture is as follows:
-1.  **Base Model**: ResNet50V2 is loaded with `include_top=False` (to remove the classification head) and `weights="imagenet"` (for pre-trained weights).
-2.  **Fine-Tuning**: The first 80% of the base model's layers are frozen, and the remaining 20% are unfrozen to allow for fine-tuning on the new dataset.
-3.  **Custom Classification Head**: A custom head is added on top of the base model:
-    -   `GlobalAveragePooling2D`: Reduces spatial dimensions.
-    -   `Dense(64, activation='relu', kernel_regularizer=l2(0.001))`: A dense layer with ReLU activation and L2 regularization to prevent overfitting.
-    -   `Dropout(0.3)`: Dropout layer to further prevent overfitting.
-    -   `Dense(4, activation='softmax')`: Output layer with 4 units (for 4 classes) and softmax activation.
+### Transfer Learning with ResNet50V2
+The project utilizes ResNet50V2, a pre-trained Convolutional Neural Network (CNN) on the ImageNet dataset, as a base model for transfer learning. The top layers of the ResNet50V2 are fine-tuned, while the initial layers are frozen to retain the learned features.
 
-## Optimizers Evaluated
-The model's performance is evaluated using different optimizers, each with a learning rate of `0.00005`:
+### Model Architecture
+The architecture consists of:
+-   **Base Model**: ResNet50V2 (pre-trained on ImageNet, `include_top=False`)
+-   **Fine-tuning**: The top 20% of ResNet50V2 layers are unfrozen and trained.
+-   **Classification Head**: Added on top of the base model:
+    -   `GlobalAveragePooling2D` layer
+    -   `Dense` layer with 64 units, `relu` activation, and `l2` regularization
+    -   `Dropout` layer (0.3 rate)
+    -   `Dense` output layer with 4 units (for 4 classes) and `softmax` activation.
+
+### Optimizers Explored
+The model was trained with four different optimizers, each with a learning rate of `0.00005`, over 15 epochs:
 -   **Adam**
 -   **RMSprop**
 -   **Nadam**
 -   **Adamax**
 
-## Training and Evaluation
-Each model is trained for 15 epochs with a `batch_size` of 32. `ModelCheckpoint` is used to save the best model weights based on validation loss. Performance metrics include accuracy, precision, recall, and F1-score.
+**Callbacks**: `ModelCheckpoint` is used to save the best performing model based on validation loss.
 
 ## Results
-The performance metrics (Accuracy, Precision, Recall, F1-Score) and Confusion Matrices for each optimizer are generated and compared. Additionally, training vs. validation accuracy and loss curves are plotted to visualize the training progress and identify potential overfitting.
 
-### Summary of Performance Metrics per Optimizer
+All optimizers demonstrated excellent performance on the classification task. The following table summarizes the key metrics for each optimizer on the test set:
 
 | Optimizer | Accuracy | Precision | Recall | F1-Score |
-|:----------|:---------|:----------|:-------|:---------|
-| Adam      | 0.9939   | 0.9939    | 0.9939 | 0.9939   |
-| RMSprop   | 0.9908   | 0.9909    | 0.9908 | 0.9908   |
-| Nadam     | 0.9886   | 0.9886    | 0.9886 | 0.9886   |
-| Adamax    | 0.9817   | 0.9819    | 0.9817 | 0.9816   |
+| :-------- | :------- | :-------- | :----- | :------- |
+| Adam      | 0.9916   | 0.9916    | 0.9916 | 0.9916   |
+| RMSprop   | 0.9908   | 0.9909    | 0.9908 | 0.9909   |
+| Nadam     | 0.9893   | 0.9894    | 0.9893 | 0.9893   |
+| Adamax    | 0.9863   | 0.9865    | 0.9863 | 0.9863   |
 
+The **Adam optimizer** achieved the highest overall performance with an accuracy, precision, recall, and F1-score of **0.9916**.
 
-### Key Findings:
--   **Adam Optimizer** generally shows strong performance, achieving high accuracy, precision, recall, and F1-score.
--   **RMSprop** and **Nadam** also demonstrate competitive results.
--   **Adamax** tends to have slightly lower performance compared to the other optimizers.
-
-The plots for Accuracy, Precision, Recall, and F1-Score comparison provide a visual summary of which optimizer performs best across different metrics.
+Detailed classification reports and confusion matrices for each optimizer are provided in the notebook, showing strong performance across all individual classes as well.
 
 ## Conclusion
-Based on the evaluation, the **Adam** optimizer seems to provide the most consistent and highest performance for this brain tumor classification task, closely followed by RMSprop and Nadam. The fine-tuned ResNet50V2 model, coupled with appropriate preprocessing and data augmentation, achieves high classification accuracy.
+The fine-tuned ResNet50V2 model with data augmentation proved highly effective in classifying brain tumors from MRI images. The Adam optimizer slightly outperformed the others, achieving near-perfect accuracy and F1-scores on the test set. This project demonstrates a robust approach for medical image classification using transfer learning.
